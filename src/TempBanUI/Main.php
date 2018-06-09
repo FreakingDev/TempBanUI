@@ -27,18 +27,18 @@ class Main extends PluginBase implements Listener {
 		
 		$this->message = (new Config($this->getDataFolder() . "Message.yml", Config::YAML, array(
 		
-		"BroadcastBanMessage" => "§b{player} has been ban for §b{day} §dday/s, §b{hour} §dhour/s, §b{minute} §dminute/s. §dReason: §b{reason}",
-		"KickBanMessage" => "§dYou are ban for §b{day} §dday/s, §b{hour} §dhour/s, §b{minute} §dminute/s. \n§dReason: §b{reason}",
-		"LoginBanMessage" => "§dYou are still ban for §b{day} §dday/s, §b{hour} §dhour/s, §b{minute} §dminute/s, §b{second} §dsecond/s. \n§dReason: §b{reason}",
+		"BroadcastBanMessage" => "§b{player} has been banned for §b{day} §dday/s, §b{hour} §dhour/s, §b{minute} §dminute/s by {punisher}. §dReason: §b{reason}",
+		"KickBanMessage" => "§dYou are banned for §b{day} §dday/s, §b{hour} §dhour/s, §b{minute} §dminute/s. \n§dReason: §b{reason}",
+		"LoginBanMessage" => "§dYou are still banned for §b{day} §dday/s, §b{hour} §dhour/s, §b{minute} §dminute/s, §b{second} §dsecond/s. \n§dReason: §b{reason}",
 		
 		"BanMyself" => "§cYou can't ban yourself",
-		"NoBanPlayers" => "§bNo ban players",
-		"UnBanPlayer" => "§b{player} has been unban",
+		"NoBanPlayers" => "§bNo banned players",
+		"UnBanPlayer" => "§b{player} has been unbanned",
 
-		"BanListTitle" => "§lBAN PLAYER LIST",
-		"BanListContent" => "Choose player",
+		"BanListTitle" => "§lBANNED PLAYER LIST",
+		"BanListContent" => "Choose a player",
 
-		"InfoUIContent" => "§dInformation: \nDay: §b{day} \n§dHour: §b{hour} \n§dMinute: §b{minute} \n§dSecond: §b{second} \n§dReason: §b{reason} \n\n\n",
+		"InfoUIContent" => "§dInformation: \nDay: §b{day} \n§dHour: §b{hour} \n§dMinute: §b{minute} \n§dSecond: §b{second} \n§dReason: §b{reason} \n§dBanned by: §b{punisher} \n\n\n",
 		"InfoUIUnBanButton" => "Unban Player",
 		
 		)))->getAll();
@@ -50,11 +50,11 @@ class Main extends PluginBase implements Listener {
 				if($sender instanceof Player) {
 					if($sender->hasPermission("use.tban")){
 						$this->openTbanUI($sender);
+						return true;
 					}
-				}
-				else{
+				} else {
 					$sender->sendMessage(TextFormat::RED . "Use this Command in-game.");
-					return true;
+					return false;
 				}
 			break;
 			
@@ -62,12 +62,14 @@ class Main extends PluginBase implements Listener {
 				if($sender instanceof Player) {
 					if($sender->hasPermission("use.tcheck")){
 						$this->openTcheckUI($sender);
+						return true;
 					}
+				} else {
+					$sender->sendMessage(TextFormat::RED . "Use this Command in-game.");
+					return false;
 				}
 			break;
-			
 		}
-		return true;
     }
 	
 	public function openTbanUI($sender){
@@ -91,13 +93,14 @@ class Main extends PluginBase implements Listener {
 						$hour = ($data[2] * 3600);
 						$min = ($data[3] * 60);
 						$banTime = $now + $day + $hour + $min;
-						$banInfo = $this->db->prepare("INSERT OR REPLACE INTO banPlayers (player, banTime, reason) VALUES (:player, :banTime, :reason);");
+						$banInfo = $this->db->prepare("INSERT OR REPLACE INTO banPlayers (player, banTime, reason, punisher) VALUES (:player, :banTime, :reason, :punisher);");
 						$banInfo->bindValue(":player", $target->getName());
 						$banInfo->bindValue(":banTime", $banTime);
 						$banInfo->bindValue(":reason", $data[4]);
+						$banInfo->bindValue(":punisher", $sender->getName());
 						$result = $banInfo->execute();
 						$target->kick(str_replace(["{day}", "{hour}", "{minute}", "{reason}"], [$data[1], $data[2], $data[3], $data[4]], $this->message["KickBanMessage"]));
-						$this->getServer()->broadcastMessage(str_replace(["{player}", "{day}", "{hour}", "{minute}", "{reason}"], [$target->getName(), $data[1], $data[2], $data[3], $data[4]], $this->message["BroadcastBanMessage"]));
+						$this->getServer()->broadcastMessage(str_replace(["{punisher}", "{player}", "{day}", "{hour}", "{minute}", "{reason}"], [$sender->getName(), $target->getName(), $data[1], $data[2], $data[3], $data[4]], $this->message["BroadcastBanMessage"]));
 						foreach($this->playerList as $player){
 							unset($this->playerList[strtolower($player->getName())]);
 						}
@@ -185,6 +188,7 @@ class Main extends PluginBase implements Listener {
 		if (!empty($array)) {
 			$banTime = $array['banTime'];
 			$reason = $array['reason'];
+			$punisher = $array['punisher'];
 			$now = time();
 			$remainingTime = $banTime - $now;
 			$day = floor($remainingTime / 86400);
@@ -196,7 +200,7 @@ class Main extends PluginBase implements Listener {
 			$second = ceil($remainingSec);
 		}
 		$form->setTitle(TextFormat::BOLD . $banPlayer);
-		$form->setContent(str_replace(["{day}", "{hour}", "{minute}", "{second}", "{reason}"], [$day, $hour, $minute, $second, $reason], $this->message["InfoUIContent"]));
+		$form->setContent(str_replace(["{day}", "{hour}", "{minute}", "{second}", "{reason}", "{punisher}"], [$day, $hour, $minute, $second, $reason, $punisher], $this->message["InfoUIContent"]));
 		$form->addButton($this->message["InfoUIUnBanButton"]);
 		$form->sendToPlayer($sender);
 		return $form;
