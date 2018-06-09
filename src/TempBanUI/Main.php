@@ -200,7 +200,7 @@ class Main extends PluginBase implements Listener {
 			$second = ceil($remainingSec);
 		}
 		$form->setTitle(TextFormat::BOLD . $banPlayer);
-		$form->setContent(str_replace(["{day}", "{hour}", "{minute}", "{second}", "{reason}", {punisher}], [$day, $hour, $minute, $second, $reason, $punisher], $this->message["InfoUIContent"]));
+		$form->setContent(str_replace(["{day}", "{hour}", "{minute}", "{second}", "{reason}", "{punisher}"], [$day, $hour, $minute, $second, $reason, $punisher], $this->message["InfoUIContent"]));
 		$form->addButton($this->message["InfoUIUnBanButton"]);
 		$form->sendToPlayer($sender);
 		return $form;
